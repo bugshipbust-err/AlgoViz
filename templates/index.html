@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Algorithm Visualizer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Search Algorithm Visualizer</h1>
+        
+        <!-- Algorithm Selection -->
+        <div class="algorithm-section">
+            <h2>Select Algorithm</h2>
+            <div class="algorithm-tabs">
+                <button class="algo-tab-btn active" onclick="selectAlgorithm('dfs')">Depth First Search</button>
+                <button class="algo-tab-btn" onclick="selectAlgorithm('bfs')">Breadth First Search</button>
+                <button class="algo-tab-btn" onclick="selectAlgorithm('ucs')">Uniform Cost Search</button>
+                <button class="algo-tab-btn" onclick="selectAlgorithm('dls')">Depth Limited Search</button>
+                <button class="algo-tab-btn" onclick="selectAlgorithm('ids')">Iterative Deepening DFS</button>
+                <button class="algo-tab-btn" onclick="selectAlgorithm('best')">Best First Search</button>
+                <button class="algo-tab-btn" onclick="selectAlgorithm('astar')">A* Search</button>
+            </div>
+        </div>
+        
+        <!-- Input Section -->
+        <div class="input-section">
+            <div class="input-methods">
+                <div class="method-tabs">
+                    <button class="tab-btn active" onclick="showTab('text-input')">Text Input</button>
+                    <button class="tab-btn" onclick="showTab('interactive')">Interactive</button>
+                    <button class="tab-btn" onclick="showTab('file-upload')">File Upload</button>
+                </div>
+                
+                <!-- Text Input Method -->
+                <div id="text-input" class="input-method active">
+                    <div class="input-group">
+                        <label for="graph-input">Graph Edges (e.g., A-B,B-C):</label>
+                        <input type="text" id="graph-input" value="A-B,A-C,B-D,C-E,D-F,E-F" placeholder="Enter edges separated by commas">
+                        <button onclick="parseTextInput()">Parse Graph</button>
+                    </div>
+                </div>
+                
+                <!-- Interactive Input Method -->
+                <div id="interactive" class="input-method">
+                    <div class="interactive-controls">
+                        <div class="input-group">
+                            <label for="node-name">Node Name:</label>
+                            <input type="text" id="node-name" placeholder="Enter node name (e.g., A)">
+                            <button onclick="addNode()">Add Node</button>
+                        </div>
+                        <div class="input-group">
+                            <label for="from-node">From Node:</label>
+                            <select id="from-node"></select>
+                            <label for="to-node">To Node:</label>
+                            <select id="to-node"></select>
+                            <button onclick="addEdge()">Add Edge</button>
+                        </div>
+                        <div class="input-group">
+                            <button onclick="clearGraph()" class="clear-btn">Clear Graph</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- File Upload Method -->
+                <div id="file-upload" class="input-method">
+                    <div class="input-group">
+                        <label for="graph-file">Upload Graph File (CSV or TXT):</label>
+                        <input type="file" id="graph-file" accept=".csv,.txt">
+                        <button onclick="parseFileInput()">Parse File</button>
+                    </div>
+                    <div class="file-format-info">
+                        <p><strong>File Format:</strong></p>
+                        <p>CSV: <code>from,to</code> or <code>node1,node2</code></p>
+                        <p>TXT: <code>node1-node2</code> (one edge per line)</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Graph Parameters -->
+            <div class="graph-params">
+                <div class="input-group">
+                    <label for="graph-type-select">Graph Type:</label>
+                    <select id="graph-type-select" onchange="updateGraphType()">
+                        <option value="undirected">Undirected</option>
+                        <option value="directed">Directed</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="start-node">Start Node:</label>
+                    <select id="start-node"></select>
+                </div>
+                <div class="input-group">
+                    <label for="target-node">Target Node:</label>
+                    <select id="target-node"></select>
+                </div>
+                <div class="input-group" id="cost-inputs" style="display: none;">
+                    <label for="cost-input">Edge Costs (e.g., A-B:5,B-C:3):</label>
+                    <input type="text" id="cost-input" placeholder="Enter costs for weighted algorithms">
+                </div>
+                <div class="input-group" id="heuristic-inputs" style="display: none;">
+                    <label for="heuristic-input">Heuristic Values (e.g., A:10,B:8):</label>
+                    <input type="text" id="heuristic-input" placeholder="Enter heuristic values for informed search">
+                </div>
+                <div class="input-group" id="depth-limit-input" style="display: none;">
+                    <label for="depth-limit">Depth Limit:</label>
+                    <input type="number" id="depth-limit" value="3" min="1" max="10">
+                </div>
+                <button onclick="runVisualization()" class="run-btn">Visualize Algorithm</button>
+            </div>
+        </div>
+        
+        <!-- Graph Visualization -->
+        <div class="visualization-container">
+            <div class="graph-info">
+                <h3>Graph Structure</h3>
+                <div class="info-panel">
+                    <span id="node-count">Nodes: 0</span>
+                    <span id="edge-count">Edges: 0</span>
+                    <span id="algorithm-type">Algorithm: DFS</span>
+                    <span id="graph-type">Type: Undirected</span>
+                </div>
+            </div>
+            
+            <div class="graph-visualization">
+                <svg id="main-graph-svg"></svg>
+            </div>
+            
+            <div class="legend">
+                <h3>Color Legend</h3>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #69b3a2;"></div>
+                    <span>Unvisited</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #ff6b6b;"></div>
+                    <span>Currently Processing</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #ffa726;"></div>
+                    <span>In Queue/Stack</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #66bb6a;"></div>
+                    <span>Visited</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #ab47bc;"></div>
+                    <span>Final Path</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Execution Panel -->
+        <div class="execution-panel">
+            <div class="execution-info">
+                <div class="queue-stack-panel">
+                    <h3 id="queue-stack-title">Stack</h3>
+                    <div id="queue-stack-display" class="info-display"></div>
+                </div>
+                <div class="path-panel">
+                    <h3>Current Path</h3>
+                    <div id="path-display" class="info-display"></div>
+                </div>
+                <div class="cost-panel" id="cost-panel" style="display: none;">
+                    <h3>Total Cost</h3>
+                    <div id="cost-display" class="info-display">0.00</div>
+                </div>
+                <div class="visited-panel">
+                    <h3>Visited Order</h3>
+                    <div id="visited-display" class="info-display"></div>
+                </div>
+            </div>
+            <div class="execution-log">
+                <h3>Execution Log</h3>
+                <div id="log-container">
+                    <ul id="log-list"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
